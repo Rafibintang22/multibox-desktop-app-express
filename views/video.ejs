@@ -3,20 +3,14 @@
     <head>
         <meta charset="UTF-8" />
         <title>Video Player</title>
-        <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
         <style>
             body {
                 margin: 0;
-                display: flex;
-                place-items: center;
                 min-width: 320px;
                 min-height: 100vh;
+                background: black;
             }
             video {
-                position: fixed;
-                top: 0;
-                left: 0;
-
                 width: 100vw;
                 height: 100vh;
                 object-fit: cover;
@@ -27,13 +21,10 @@
         <video id="videoPlayer" autoplay playsinline></video>
 
         <script>
-            // Build playlist from server variables
+            // Playlist dibangun dari server
             const videoList = [
-                <% videoList.forEach((url) => {
-                    const filename = decodeURIComponent(url.split("/").pop()); // decode URL agar cocok dengan file lokal
-                    const localPath = downloadedVideos.has(filename) ? `/downloads/${filename}` : url;
-                %>
-                    "<%= localPath %>",
+                <% videoList.forEach((url) => { %>
+                    "<%= url %>",
                 <% }); %>
             ];
 
@@ -42,23 +33,18 @@
 
             function playVideo(index) {
                 if (!videoList[index]) return;
-
                 videoPlayer.src = videoList[index];
                 videoPlayer.play().catch(err => console.log("Play error:", err));
             }
 
-            // Event: ketika video selesai, lanjut ke video berikutnya
+            // Event: lanjut ke video berikutnya
             videoPlayer.addEventListener("ended", () => {
-                currentIndex = (currentIndex + 1) % videoList.length; // looping playlist
+                currentIndex = (currentIndex + 1) % videoList.length; // looping
                 playVideo(currentIndex);
             });
 
-            // Mulai mainkan video pertama
-            if(videoList.length > 0){
-                playVideo(currentIndex);
-            } else {
-                console.log("Playlist kosong, tidak ada video untuk diputar.");
-            }
+            if(videoList.length > 0) playVideo(currentIndex);
+            else console.log("Tidak ada video untuk diputar");
         </script>
     </body>
 </html>

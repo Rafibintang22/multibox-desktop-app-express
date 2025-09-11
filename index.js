@@ -17,17 +17,16 @@ let downloadedVideos = new Set();
 
 // Fungsi helper untuk scan folder downloads
 function scanDownloadedVideos() {
+    if (!fs.existsSync(DOWNLOAD_DIR)) return;
     const files = fs.readdirSync(DOWNLOAD_DIR);
     downloadedVideos = new Set(files);
 }
+scanDownloadedVideos(); // panggil awal
 
-// Panggil saat awal agar ada fallback
-scanDownloadedVideos();
-
-// Start TCP client untuk menerima list video
+// Start TCP client
 connectToServer("localhost", 8080, (list) => {
     if (list && list.length > 0) {
-        videoList = list; // update playlist baru
+        videoList = list;
         console.log("Received video list:", videoList);
 
         // Mulai worker download
@@ -43,19 +42,24 @@ connectToServer("localhost", 8080, (list) => {
         });
     } else {
         console.log("TCP server tidak merespon, menggunakan playlist lokal");
+        // jika list server kosong, gunakan video dari downloads
+        videoList = Array.from(downloadedVideos).map((f) => `/downloads/${f}`);
     }
 });
 
-// Serve video page
+// Set EJS
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
+// Render halaman video
 app.get("/", (req, res) => {
-    res.render("video", {
-        videoList,
-        downloadedVideos,
-        downloadDir: "/downloads",
-    });
+    // Jika videoList masih kosong, rebuild dari folder downloads
+    if (videoList.length === 0) {
+        scanDownloadedVideos();
+        videoList = Array.from(downloadedVideos).map((f) => `/downloads/${f}`);
+    }
+
+    res.render("video", { videoList });
 });
 
 // Serve folder downloads statically
