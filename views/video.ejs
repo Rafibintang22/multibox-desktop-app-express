@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <title>Video Player</title>
+        <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+        <style>
+            body,
+            html {
+                margin: 0;
+                padding: 0;
+                background: black;
+            }
+            video {
+                width: 100vw;
+                height: 100vh;
+                object-fit: cover;
+            }
+        </style>
+    </head>
+    <body>
+        <video id="videoPlayer" autoplay playsinline></video>
+
+        <script>
+            // Build playlist from server variables
+            const videoList = [
+                <% videoList.forEach((url) => {
+                    const filename = decodeURIComponent(url.split("/").pop()); // decode URL agar cocok dengan file lokal
+                    const localPath = downloadedVideos.has(filename) ? `/downloads/${filename}` : url;
+                %>
+                    "<%= localPath %>",
+                <% }); %>
+            ];
+
+            let currentIndex = 0;
+            const videoPlayer = document.getElementById("videoPlayer");
+
+            function playVideo(index) {
+                if (!videoList[index]) return;
+
+                videoPlayer.src = videoList[index];
+                videoPlayer.play().catch(err => console.log("Play error:", err));
+            }
+
+            // Event: ketika video selesai, lanjut ke video berikutnya
+            videoPlayer.addEventListener("ended", () => {
+                currentIndex = (currentIndex + 1) % videoList.length; // looping playlist
+                playVideo(currentIndex);
+            });
+
+            // Mulai mainkan video pertama
+            if(videoList.length > 0){
+                playVideo(currentIndex);
+            } else {
+                console.log("Playlist kosong, tidak ada video untuk diputar.");
+            }
+        </script>
+    </body>
+</html>

@@ -1,0 +1,28 @@
+{
+    "name": "multibox-desktop-app-express",
+    "version": "1.0.0",
+    "description": "",
+    "homepage": "https://github.com/Rafibintang22/multibox-desktop-app-express#readme",
+    "bugs": {
+        "url": "https://github.com/Rafibintang22/multibox-desktop-app-express/issues"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/Rafibintang22/multibox-desktop-app-express.git"
+    },
+    "license": "ISC",
+    "author": "Rafi Bintang",
+    "type": "commonjs",
+    "main": "index.js",
+    "scripts": {
+        "dev": "nodemon index.js",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.10"
+    },
+    "dependencies": {
+        "ejs": "^3.1.10",
+        "express": "^5.1.0"
+    }
+}
