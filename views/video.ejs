@@ -25,7 +25,6 @@
         <video id="videoPlayer" autoplay playsinline></video>
 
         <script>
-            // Playlist dibangun dari server
             const videoList = [
                 <% videoList.forEach((url) => { %>
                     "<%= url %>",
@@ -41,14 +40,13 @@
                 videoPlayer.play().catch(err => console.log("Play error:", err));
             }
 
-            // Event: lanjut ke video berikutnya
             videoPlayer.addEventListener("ended", () => {
-                currentIndex = (currentIndex + 1) % videoList.length; // looping
+                currentIndex = (currentIndex + 1) % videoList.length;
                 playVideo(currentIndex);
             });
 
-            if(videoList.length > 0) playVideo(currentIndex);
-            else console.log("Tidak ada video untuk diputar");
+            if (videoList.length > 0) playVideo(currentIndex);
+            else console.log("Playlist kosong, tidak ada video untuk diputar");
         </script>
     </body>
 </html>

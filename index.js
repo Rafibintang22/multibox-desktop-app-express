@@ -11,17 +11,19 @@ const PORT = 8081;
 const DOWNLOAD_DIR = path.join(__dirname, "downloads");
 if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR);
 
-// List video dari VPS
+// List video dan file yang sudah didownload
 let videoList = [];
 let downloadedVideos = new Set();
 
-// Fungsi helper untuk scan folder downloads
+// Fungsi scan folder downloads
 function scanDownloadedVideos() {
     if (!fs.existsSync(DOWNLOAD_DIR)) return;
     const files = fs.readdirSync(DOWNLOAD_DIR);
     downloadedVideos = new Set(files);
 }
-scanDownloadedVideos(); // panggil awal
+
+// Panggil awal untuk fallback
+scanDownloadedVideos();
 
 // Start TCP client
 connectToServer("localhost", 8080, (list) => {
@@ -41,8 +43,9 @@ connectToServer("localhost", 8080, (list) => {
             }
         });
     } else {
-        console.log("TCP server tidak merespon, menggunakan playlist lokal");
-        // jika list server kosong, gunakan video dari downloads
+        console.log("TCP server tidak merespon, gunakan playlist lokal");
+        // fallback ke downloads
+        scanDownloadedVideos();
         videoList = Array.from(downloadedVideos).map((f) => `/downloads/${f}`);
     }
 });
@@ -53,10 +56,16 @@ app.set("views", path.join(__dirname, "views"));
 
 // Render halaman video
 app.get("/", (req, res) => {
-    // Jika videoList masih kosong, rebuild dari folder downloads
+    // Pastikan selalu ada playlist dari folder downloads jika kosong
+    scanDownloadedVideos();
     if (videoList.length === 0) {
-        scanDownloadedVideos();
         videoList = Array.from(downloadedVideos).map((f) => `/downloads/${f}`);
+    } else {
+        // gunakan local copy jika sudah di-download
+        videoList = videoList.map((url) => {
+            const filename = decodeURIComponent(url.split("/").pop());
+            return downloadedVideos.has(filename) ? `/downloads/${filename}` : url;
+        });
     }
 
     res.render("video", { videoList });
