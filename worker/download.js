@@ -1,33 +1,36 @@
 const { workerData, parentPort } = require("worker_threads");
 const fs = require("fs");
 const path = require("path");
-const http = require("http"); // pakai http untuk URL http
+const http = require("http");
 const https = require("https");
 
 const { videoList, downloadDir } = workerData;
 
-function downloadVideo(url) {
+// 🔽 Download file dari URL
+async function downloadContent(scheduleId, content) {
     return new Promise((resolve, reject) => {
-        const filename = path.basename(decodeURIComponent(url)); // decode %20
-        const filepath = path.join(downloadDir, filename);
+        const scheduleDir = path.join(downloadDir, `schedule_${scheduleId}`);
+        if (!fs.existsSync(scheduleDir)) fs.mkdirSync(scheduleDir, { recursive: true });
 
-        if (fs.existsSync(filepath)) return resolve(filename);
+        const filename = decodeURIComponent(content.title);
+        const filepath = path.join(scheduleDir, filename);
+
+        if (fs.existsSync(filepath)) return resolve({ scheduleId, filename });
 
         const file = fs.createWriteStream(filepath);
-        const client = url.startsWith("https") ? https : http;
+        const client = content.url.startsWith("https") ? https : http;
 
         client
-            .get(url, (res) => {
+            .get(content.url, (res) => {
                 if (res.statusCode !== 200) {
                     fs.unlink(filepath, () => {});
-                    return reject(new Error(`Failed to get '${url}' (${res.statusCode})`));
+                    return reject(new Error(`Request Failed: ${res.statusCode}`));
                 }
-
                 res.pipe(file);
                 file.on("finish", () => {
                     file.close(() => {
-                        parentPort.postMessage({ status: "downloaded", filename });
-                        resolve(filename);
+                        parentPort.postMessage({ status: "downloaded", scheduleId, filename });
+                        resolve({ scheduleId, filename });
                     });
                 });
             })
@@ -38,14 +41,16 @@ function downloadVideo(url) {
     });
 }
 
-// Download semua video secara paralel
+// 🚀 Jalankan download semua konten
 async function startDownload() {
-    try {
-        const promises = videoList.map((url) => downloadVideo(url));
-        await Promise.all(promises);
-        console.log("All videos downloaded!");
-    } catch (err) {
-        console.error("Error downloading videos:", err);
+    for (const schedule of videoList) {
+        for (const content of schedule.contents) {
+            try {
+                await downloadContent(schedule.schedule_id, content);
+            } catch (err) {
+                console.error("Download failed:", err.message);
+            }
+        }
     }
 }
 

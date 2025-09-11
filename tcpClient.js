@@ -1,6 +1,6 @@
 const net = require("net");
 
-function connectToServer(host, port, onVideoList) {
+function connectToServer(host, port, onSchedule) {
     const client = new net.Socket();
 
     client.connect(port, host, () => {
@@ -9,9 +9,9 @@ function connectToServer(host, port, onVideoList) {
 
     client.on("data", (data) => {
         try {
-            const videoList = JSON.parse(data.toString());
-            console.log("Received video list:", videoList);
-            onVideoList(videoList);
+            const schedule = JSON.parse(data.toString());
+            console.log("Received video list:", schedule);
+            onSchedule(schedule);
         } catch (err) {
             console.error("Failed to parse video list:", err);
         }

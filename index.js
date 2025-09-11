@@ -11,25 +11,34 @@ const PORT = 8081;
 const DOWNLOAD_DIR = path.join(__dirname, "downloads");
 if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR);
 
-// List video dan file yang sudah didownload
 let videoList = [];
-let downloadedVideos = new Set();
+let downloadedVideos = {}; // { scheduleId: Set(files) }
 
-// Fungsi scan folder downloads
+// 🔎 scan semua folder schedule
 function scanDownloadedVideos() {
     if (!fs.existsSync(DOWNLOAD_DIR)) return;
-    const files = fs.readdirSync(DOWNLOAD_DIR);
-    downloadedVideos = new Set(files);
+    const schedules = fs
+        .readdirSync(DOWNLOAD_DIR, { withFileTypes: true })
+        .filter((dir) => dir.isDirectory())
+        .map((dir) => dir.name);
+
+    downloadedVideos = {};
+
+    for (const scheduleFolder of schedules) {
+        const scheduleId = scheduleFolder.replace("schedule_", "");
+        const files = fs.readdirSync(path.join(DOWNLOAD_DIR, scheduleFolder));
+        downloadedVideos[scheduleId] = new Set(files);
+    }
 }
 
-// Panggil awal untuk fallback
 scanDownloadedVideos();
 
-// Start TCP client
-connectToServer("localhost", 8080, (list) => {
-    if (list && list.length > 0) {
-        videoList = list;
-        console.log("Received video list:", videoList);
+// TCP client (terima schedule dari server)
+connectToServer("localhost", 9000, (schedule) => {
+    if (schedule && schedule.contents && schedule.contents.length > 0) {
+        // Bungkus dalam array supaya konsisten dengan worker
+        videoList = [schedule];
+        console.log("Received schedule:", videoList);
 
         // Mulai worker download
         const downloadWorker = new Worker("./worker/download.js", {
@@ -38,33 +47,57 @@ connectToServer("localhost", 8080, (list) => {
 
         downloadWorker.on("message", (msg) => {
             if (msg.status === "downloaded") {
-                downloadedVideos.add(msg.filename);
-                console.log("Downloaded:", msg.filename);
+                if (!downloadedVideos[msg.scheduleId]) {
+                    downloadedVideos[msg.scheduleId] = new Set();
+                }
+                downloadedVideos[msg.scheduleId].add(msg.filename);
+                console.log(`Downloaded [Schedule ${msg.scheduleId}]: ${msg.filename}`);
             }
         });
     } else {
-        console.log("TCP server tidak merespon, gunakan playlist lokal");
-        // fallback ke downloads
+        console.log("TCP server tidak merespon, gunakan folder downloads lokal");
         scanDownloadedVideos();
-        videoList = Array.from(downloadedVideos).map((f) => `/downloads/${f}`);
+        videoList = Object.keys(downloadedVideos).map((id) => ({
+            schedule_id: id,
+            contents: Array.from(downloadedVideos[id]).map((f) => ({
+                title: f,
+                url: `/downloads/schedule_${id}/${f}`,
+            })),
+        }));
     }
 });
 
-// Set EJS
+// Konfigurasi view engine EJS
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-// Render halaman video
+// Endpoint utama
 app.get("/", (req, res) => {
-    // Pastikan selalu ada playlist dari folder downloads jika kosong
     scanDownloadedVideos();
-    if (videoList.length === 0) {
-        videoList = Array.from(downloadedVideos).map((f) => `/downloads/${f}`);
+
+    if (!videoList || videoList.length === 0) {
+        // fallback ke local downloads
+        videoList = Object.keys(downloadedVideos).map((id) => ({
+            schedule_id: id,
+            contents: Array.from(downloadedVideos[id]).map((f) => ({
+                title: f,
+                url: `/downloads/schedule_${id}/${f}`,
+            })),
+        }));
     } else {
-        // gunakan local copy jika sudah di-download
-        videoList = videoList.map((url) => {
-            const filename = decodeURIComponent(url.split("/").pop());
-            return downloadedVideos.has(filename) ? `/downloads/${filename}` : url;
+        // pakai local file jika sudah didownload
+        videoList = videoList.map((schedule) => {
+            const sid = schedule.schedule_id.toString();
+            return {
+                ...schedule,
+                contents: schedule.contents.map((content) => {
+                    const filename = decodeURIComponent(content.title);
+                    if (downloadedVideos[sid] && downloadedVideos[sid].has(filename)) {
+                        return { ...content, url: `/downloads/schedule_${sid}/${filename}` };
+                    }
+                    return content;
+                }),
+            };
         });
     }
 

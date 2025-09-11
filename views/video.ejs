@@ -10,8 +10,10 @@
                 place-items: center;
                 min-width: 320px;
                 min-height: 100vh;
+                background: black;
             }
-            video {
+            video,
+            img {
                 position: fixed;
                 top: 0;
                 left: 0;
@@ -23,30 +25,47 @@
     </head>
     <body>
         <video id="videoPlayer" autoplay playsinline></video>
+        <img id="imagePlayer" style="display: none" />
 
         <script>
-            const videoList = [
-                <% videoList.forEach((url) => { %>
-                    "<%= url %>",
-                <% }); %>
-            ];
+            let playlist = [];
+            <% videoList.forEach(schedule => { %>
+                <% schedule.contents.forEach(content => { %>
+                    playlist.push({ url: "<%= content.url %>", title: "<%= content.title %>" });
+                <% }) %>
+            <% }) %>
 
             let currentIndex = 0;
             const videoPlayer = document.getElementById("videoPlayer");
+            const imagePlayer = document.getElementById("imagePlayer");
 
-            function playVideo(index) {
-                if (!videoList[index]) return;
-                videoPlayer.src = videoList[index];
-                videoPlayer.play().catch(err => console.log("Play error:", err));
+            function playItem(index) {
+                if (!playlist[index]) return;
+                const item = playlist[index];
+                const ext = item.title.split('.').pop().toLowerCase();
+
+                if (["mp4","webm","ogg"].includes(ext)) {
+                    imagePlayer.style.display = "none";
+                    videoPlayer.style.display = "block";
+                    videoPlayer.src = item.url;
+                    videoPlayer.play().catch(err => console.log("Play error:", err));
+                } else if (["jpg","jpeg","png","gif"].includes(ext)) {
+                    videoPlayer.style.display = "none";
+                    imagePlayer.style.display = "block";
+                    imagePlayer.src = item.url;
+                    setTimeout(() => {
+                        currentIndex = (currentIndex + 1) % playlist.length;
+                        playItem(currentIndex);
+                    }, 5000); // tampilkan gambar 5 detik
+                }
             }
 
             videoPlayer.addEventListener("ended", () => {
-                currentIndex = (currentIndex + 1) % videoList.length;
-                playVideo(currentIndex);
+                currentIndex = (currentIndex + 1) % playlist.length;
+                playItem(currentIndex);
             });
 
-            if (videoList.length > 0) playVideo(currentIndex);
-            else console.log("Playlist kosong, tidak ada video untuk diputar");
+            if (playlist.length > 0) playItem(currentIndex);
         </script>
     </body>
 </html>
