@@ -14,7 +14,7 @@ if (!fs.existsSync(DOWNLOAD_DIR)) fs.mkdirSync(DOWNLOAD_DIR);
 let videoList = [];
 let downloadedVideos = {}; // { scheduleId: Set(files) }
 
-// 🔎 scan semua folder schedule
+// scan semua folder schedule
 function scanDownloadedVideos() {
     if (!fs.existsSync(DOWNLOAD_DIR)) return;
     const schedules = fs
@@ -40,7 +40,7 @@ connectToServer("localhost", 9000, (schedule) => {
         videoList = [schedule];
         console.log("Received schedule:", videoList);
 
-        // Mulai worker download
+        // worker download
         const downloadWorker = new Worker("./worker/download.js", {
             workerData: { videoList, downloadDir: DOWNLOAD_DIR },
         });
@@ -67,11 +67,9 @@ connectToServer("localhost", 9000, (schedule) => {
     }
 });
 
-// Konfigurasi view engine EJS
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
-// Endpoint utama
 app.get("/", (req, res) => {
     scanDownloadedVideos();
 

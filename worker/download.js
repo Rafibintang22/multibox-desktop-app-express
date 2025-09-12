@@ -6,7 +6,7 @@ const https = require("https");
 
 const { videoList, downloadDir } = workerData;
 
-// 🔽 Download file dari URL
+// Download file dari URL
 async function downloadContent(scheduleId, content) {
     return new Promise((resolve, reject) => {
         const scheduleDir = path.join(downloadDir, `schedule_${scheduleId}`);
@@ -41,7 +41,7 @@ async function downloadContent(scheduleId, content) {
     });
 }
 
-// 🚀 Jalankan download semua konten
+// Jalankan download semua konten
 async function startDownload() {
     for (const schedule of videoList) {
         for (const content of schedule.contents) {
