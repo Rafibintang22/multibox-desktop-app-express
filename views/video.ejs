@@ -24,7 +24,7 @@
         </style>
     </head>
     <body>
-        <video id="videoPlayer" autoplay playsinline></video>
+        <video id="videoPlayer" autoplay playsinline muted></video>
         <img id="imagePlayer" style="display: none" />
 
         <script>
@@ -56,7 +56,7 @@
                     setTimeout(() => {
                         currentIndex = (currentIndex + 1) % playlist.length;
                         playItem(currentIndex);
-                    }, 5000); // tampilkan gambar 5 detik
+                    }, 5000);
                 }
             }
 
@@ -66,6 +66,17 @@
             });
 
             if (playlist.length > 0) playItem(currentIndex);
+
+            // SSE listener
+            const evtSource = new EventSource("/events");
+            evtSource.onmessage = (event) => {
+                const schedule = JSON.parse(event.data);
+                console.log("SSE received:", schedule);
+
+                playlist = schedule.contents.map(c => ({ url: c.url, title: c.title }));
+                currentIndex = 0;
+                playItem(currentIndex); // langsung play
+            };
         </script>
     </body>
 </html>
