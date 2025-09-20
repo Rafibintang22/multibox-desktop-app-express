@@ -47,12 +47,16 @@
                 if (["mp4","webm","ogg"].includes(ext)) {
                     imagePlayer.style.display = "none";
                     videoPlayer.style.display = "block";
-                    videoPlayer.src = item.url;
+                    if (videoPlayer.src !== item.url) { // Hanya update jika berbeda
+                        videoPlayer.src = item.url;
+                    }
                     videoPlayer.play().catch(err => console.log("Play error:", err));
                 } else if (["jpg","jpeg","png","gif"].includes(ext)) {
                     videoPlayer.style.display = "none";
                     imagePlayer.style.display = "block";
-                    imagePlayer.src = item.url;
+                    if (imagePlayer.src !== item.url) { // Hanya update jika berbeda
+                        imagePlayer.src = item.url;
+                    }
                     setTimeout(() => {
                         currentIndex = (currentIndex + 1) % playlist.length;
                         playItem(currentIndex);
@@ -67,15 +71,19 @@
 
             if (playlist.length > 0) playItem(currentIndex);
 
-            // SSE listener
+            // SSE listener: merge baru tanpa reset currentIndex
             const evtSource = new EventSource("/events");
             evtSource.onmessage = (event) => {
                 const schedule = JSON.parse(event.data);
                 console.log("SSE received:", schedule);
 
-                playlist = schedule.contents.map(c => ({ url: c.url, title: c.title }));
-                currentIndex = 0;
-                playItem(currentIndex); // langsung play
+                schedule.contents.forEach(c => {
+                    // Tambahkan hanya yang belum ada di playlist
+                    if (!playlist.some(p => p.title === c.title)) {
+                        playlist.push({ url: c.url, title: c.title });
+                    }
+                });
+                // Jangan reset currentIndex, biarkan video sekarang tetap berjalan
             };
         </script>
     </body>
