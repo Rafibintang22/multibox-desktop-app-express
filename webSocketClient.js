@@ -26,6 +26,15 @@ function connectToServer(url, onSchedule) {
         console.error("WebSocket Error:", err.message);
         ws.close();
     });
+
+    // optional: log kalau server kirim ping (jarang terjadi, biasanya auto dibalas oleh ws lib)
+    ws.on("ping", () => {
+        console.log("📡 received PING from server, sending PONG from");
+    });
+
+    ws.on("pong", () => {
+        console.log("📨 received PONG from server");
+    });
 }
 
 module.exports = { connectToServer };
