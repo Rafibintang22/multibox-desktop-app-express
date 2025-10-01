@@ -66,6 +66,13 @@ connectToServer(
             // Broadcast streaming playlist
             broadcast({
                 schedule_id: schedule.schedule_id,
+                playlist_id: schedule.playlist_id,
+                name: schedule.name,
+                is_urgent: schedule.is_urgent,
+                start_date: schedule.start_date,
+                end_date: schedule.end_date,
+                start_time: schedule.start_time,
+                end_time: schedule.end_time,
                 contents: getPlaylistForClient(schedule),
             });
 

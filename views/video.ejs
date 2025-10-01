@@ -36,6 +36,9 @@
             <% }) %>
 
             let currentIndex = 0;
+            let isUrgentPlaying = false;
+            let backupPlaylist = [];
+            let backupIndex = 0;
             const videoPlayer = document.getElementById("videoPlayer");
             const imagePlayer = document.getElementById("imagePlayer");
 
@@ -65,25 +68,56 @@
             }
 
             videoPlayer.addEventListener("ended", () => {
-                currentIndex = (currentIndex + 1) % playlist.length;
-                playItem(currentIndex);
+                if (isUrgentPlaying && currentIndex >= playlist.length - 1) {
+                    console.log("✅ Urgent playlist finished, restoring normal playlist");
+                    playlist = backupPlaylist;
+                    currentIndex = backupIndex;
+                    isUrgentPlaying = false;
+                    playItem(currentIndex);
+                } else {
+                    currentIndex = (currentIndex + 1) % playlist.length;
+                    playItem(currentIndex);
+                }
             });
 
             if (playlist.length > 0) playItem(currentIndex);
 
-            // SSE listener: merge baru tanpa reset currentIndex
             const evtSource = new EventSource("/events");
             evtSource.onmessage = (event) => {
                 const schedule = JSON.parse(event.data);
                 console.log("SSE received:", schedule);
 
-                schedule.contents.forEach(c => {
-                    // Tambahkan hanya yang belum ada di playlist
-                    if (!playlist.some(p => p.title === c.title)) {
-                        playlist.push({ url: c.url, title: c.title });
+                if (schedule.is_urgent) {
+                    console.log("🚨 Urgent playlist received:", schedule.name);
+
+                    if (!isUrgentPlaying) {
+                        backupPlaylist = [...playlist];
+                        backupIndex = currentIndex;
                     }
-                });
-                // Jangan reset currentIndex, biarkan video sekarang tetap berjalan
+
+                    playlist = schedule.contents.map(c => ({
+                        url: c.url,
+                        title: c.title
+                    }));
+                    currentIndex = 0;
+                    isUrgentPlaying = true;
+                    playItem(currentIndex);
+                } else {
+                    console.log("ℹ️ Normal playlist received:", schedule.name);
+                    let wasEmpty = playlist.length === 0; // cek apakah awalnya kosong
+
+                    schedule.contents.forEach(c => {
+                        if (!playlist.some(p => p.title === c.title)) {
+                            playlist.push({ url: c.url, title: c.title });
+                        }
+                    });
+
+                    // Kalau awalnya kosong, langsung mulai play
+                    if (wasEmpty && playlist.length > 0 && !isUrgentPlaying) {
+                        currentIndex = 0;
+                        playItem(currentIndex);
+                    }
+                }
             };
         </script>
     </body>
